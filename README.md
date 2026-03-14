@@ -2,7 +2,7 @@
 
 Microfrontend del modulo **Compresion No Confinada** para Geofal.
 
-- Dominio productivo: `https://compresion-no-confinada.geofal.com.pe`
+- Dominio productivo: `https://comp.noconfinada.geofal.com.pe`
 - Backend API: `https://api.geofal.com.pe` (rutas `/api/compresion-no-confinada`)
 
 ## Objetivo

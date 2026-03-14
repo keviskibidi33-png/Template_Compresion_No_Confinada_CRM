@@ -6,7 +6,7 @@ Documento de referencia para mantener consistente el branding del microfrontend 
 
 - Microfrontend: `compresion-no-confinada-crm`
 - Shell embebedor: `crm-geofal` modulo Compresion No Confinada
-- Flujo: CRM abre `https://compresion-no-confinada.geofal.com.pe` en dialog modal con `token` y opcionalmente `ensayo_id`
+- Flujo: CRM abre `https://comp.noconfinada.geofal.com.pe` en dialog modal con `token` y opcionalmente `ensayo_id`
 
 ## Reglas visuales
 
