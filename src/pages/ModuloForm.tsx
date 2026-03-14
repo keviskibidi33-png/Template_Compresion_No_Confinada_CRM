@@ -605,45 +605,64 @@ export default function ModuloForm() {
                                         <td className="border-t border-r border-slate-300 px-2 py-1 text-center text-xs">
                                             {['cm', 'cm', 'cm2', 'cm3', 'gr', 'gr/cm3', 'gr/cm3'][idx]}
                                         </td>
-                                        {[0, 1, 2].map((specimenIdx) => {
-                                            const fieldKey = [
-                                                'diametro_cm',
-                                                'altura_cm',
-                                                'area_cm2',
-                                                'volumen_cm3',
-                                                'peso_gr',
-                                                'p_unitario_humedo',
-                                                'p_unitario_seco',
-                                            ][idx] as keyof FormState
-
-                                            const valueArray = form[fieldKey] as Array<number | null>
-                                            const computedValue = [
-                                                null,
-                                                null,
-                                                computedArea[specimenIdx],
-                                                computedVolume[specimenIdx],
-                                                null,
-                                                computedUnitWet[specimenIdx],
-                                                computedUnitDry[specimenIdx],
-                                            ][idx]
-
-                                            const displayValue = valueArray[specimenIdx] ?? computedValue ?? ''
-
-                                            return (
-                                                <td key={`${row.label}-${specimenIdx}`} className="border-t border-r border-slate-300 p-1">
-                                                    <input
-                                                        type="number"
-                                                        step="any"
-                                                        className={denseInputClass}
-                                                        value={displayValue}
-                                                        onChange={(e) => {
-                                                            const parsed = parseNum(e.target.value)
-                                                            setArrayField(fieldKey, specimenIdx, parsed)
-                                                        }}
-                                                    />
-                                                </td>
-                                            )
-                                        })}
+                                        {idx === 0 ? (
+                                            [0, 1, 2].map((specimenIdx) => {
+                                                const fieldKey = 'diametro_cm' as keyof FormState
+                                                const valueArray = form[fieldKey] as Array<number | null>
+                                                const displayValue = valueArray[specimenIdx] ?? ''
+                                                return (
+                                                    <td key={`${row.label}-${specimenIdx}`} className="border-t border-r border-slate-300 p-1">
+                                                        <input
+                                                            type="number"
+                                                            step="any"
+                                                            className={denseInputClass}
+                                                            value={displayValue}
+                                                            onChange={(e) => {
+                                                                const parsed = parseNum(e.target.value)
+                                                                setArrayField(fieldKey, specimenIdx, parsed)
+                                                            }}
+                                                        />
+                                                    </td>
+                                                )
+                                            })
+                                        ) : (
+                                            (() => {
+                                                const fieldKey = [
+                                                    'diametro_cm',
+                                                    'altura_cm',
+                                                    'area_cm2',
+                                                    'volumen_cm3',
+                                                    'peso_gr',
+                                                    'p_unitario_humedo',
+                                                    'p_unitario_seco',
+                                                ][idx] as keyof FormState
+                                                const valueArray = form[fieldKey] as Array<number | null>
+                                                const computedValue = [
+                                                    null,
+                                                    null,
+                                                    computedArea[0],
+                                                    computedVolume[0],
+                                                    null,
+                                                    computedUnitWet[0],
+                                                    computedUnitDry[0],
+                                                ][idx]
+                                                const displayValue = valueArray[0] ?? computedValue ?? ''
+                                                return (
+                                                    <td colSpan={3} className="border-t border-r border-slate-300 p-1">
+                                                        <input
+                                                            type="number"
+                                                            step="any"
+                                                            className={denseInputClass}
+                                                            value={displayValue}
+                                                            onChange={(e) => {
+                                                                const parsed = parseNum(e.target.value)
+                                                                setArrayField(fieldKey, 0, parsed)
+                                                            }}
+                                                        />
+                                                    </td>
+                                                )
+                                            })()
+                                        )}
                                     </tr>
                                 ))}
                             </tbody>
