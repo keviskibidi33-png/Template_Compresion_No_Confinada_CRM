@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useState } from 'react'
+import { useCallback, useEffect, useMemo, useRef, useState, type KeyboardEvent as ReactKeyboardEvent } from 'react'
 import axios from 'axios'
 import toast from 'react-hot-toast'
 import { Download, Loader2, Trash2, Beaker } from 'lucide-react'
@@ -24,6 +24,10 @@ const DEBOUNCE_MS = 700
 const REVISORES = ['-', 'FABIAN LA ROSA'] as const
 const APROBADORES = ['-', 'IRMA COAQUIRA'] as const
 const SPECIMEN_COUNT = 3
+
+type TableFieldElement = HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement
+type TableNavigationGroup = 'header' | 'contenido' | 'lectura' | 'revisado' | 'aprobado'
+const getTableFieldKey = (table: TableNavigationGroup, row: number, col: number) => `${table}:${row}:${col}`
 
 const TIME_SERIES = [
     '0:00',
@@ -238,6 +242,7 @@ export default function ModuloForm() {
     const [loading, setLoading] = useState(false)
     const [loadingEdit, setLoadingEdit] = useState(false)
     const [ensayoId, setEnsayoId] = useState<number | null>(() => getEnsayoId())
+    const tableFieldRefs = useRef<Record<string, TableFieldElement | null>>({})
 
     useEffect(() => {
         const raw = localStorage.getItem(`${DRAFT_KEY}:${ensayoId ?? 'new'}`)
@@ -290,6 +295,55 @@ export default function ModuloForm() {
             return { ...prev, [key]: arr as FormState[K] }
         })
     }, [])
+
+    const focusTableElement = useCallback((element: TableFieldElement | null) => {
+        if (!element) return false
+        element.focus()
+        if (element instanceof HTMLInputElement && element.type !== 'checkbox' && element.type !== 'radio') {
+            element.select()
+        }
+        return true
+    }, [])
+
+    const focusTableField = useCallback(
+        (table: TableNavigationGroup, row: number, col: number) => {
+            const target = tableFieldRefs.current[getTableFieldKey(table, row, col)]
+            return focusTableElement(target)
+        },
+        [focusTableElement],
+    )
+
+    const focusNextTableField = useCallback(
+        (table: TableNavigationGroup, row: number, col: number) => {
+            const fields = Object.entries(tableFieldRefs.current)
+                .flatMap(([key, element]) => {
+                    if (!element) return []
+                    const [fieldTable, fieldRow, fieldCol] = key.split(':')
+                    const parsedRow = Number(fieldRow)
+                    const parsedCol = Number(fieldCol)
+                    if (fieldTable !== table || !Number.isInteger(parsedRow) || !Number.isInteger(parsedCol)) return []
+                    return [{ row: parsedRow, col: parsedCol, element }]
+                })
+                .sort((a, b) => (a.col === b.col ? a.row - b.row : a.col - b.col))
+
+            const currentIndex = fields.findIndex((field) => field.row === row && field.col === col)
+            const nextField = currentIndex >= 0 ? fields[currentIndex + 1] : null
+            return focusTableElement(nextField?.element ?? null)
+        },
+        [focusTableElement],
+    )
+
+    const handleTableEnter = useCallback(
+        (event: ReactKeyboardEvent<TableFieldElement>, table: TableNavigationGroup, row: number, col: number) => {
+            if (event.key !== 'Enter' || event.shiftKey || event.altKey || event.ctrlKey || event.metaKey) return
+            if (event.currentTarget instanceof HTMLTextAreaElement) return
+
+            event.preventDefault()
+            if (focusTableField(table, row + 1, col)) return
+            focusNextTableField(table, row, col)
+        },
+        [focusNextTableField, focusTableField],
+    )
 
     const clearAll = useCallback(() => {
         if (!window.confirm('Se limpiaran los datos no guardados. Deseas continuar?')) return
@@ -462,6 +516,10 @@ export default function ModuloForm() {
                                             value={form.muestra}
                                             onChange={(e) => setField('muestra', e.target.value)}
                                             onBlur={() => setField('muestra', normalizeMuestraCode(form.muestra))}
+                                            onKeyDown={(e) => handleTableEnter(e, 'header', 0, 0)}
+                                            ref={(element) => {
+                                                tableFieldRefs.current[getTableFieldKey('header', 0, 0)] = element
+                                            }}
                                             autoComplete="off"
                                             data-lpignore="true"
                                         />
@@ -472,6 +530,10 @@ export default function ModuloForm() {
                                             value={form.numero_ot}
                                             onChange={(e) => setField('numero_ot', e.target.value)}
                                             onBlur={() => setField('numero_ot', normalizeNumeroOtCode(form.numero_ot))}
+                                            onKeyDown={(e) => handleTableEnter(e, 'header', 0, 1)}
+                                            ref={(element) => {
+                                                tableFieldRefs.current[getTableFieldKey('header', 0, 1)] = element
+                                            }}
                                             autoComplete="off"
                                             data-lpignore="true"
                                         />
@@ -482,6 +544,10 @@ export default function ModuloForm() {
                                             value={form.fecha_ensayo}
                                             onChange={(e) => setField('fecha_ensayo', e.target.value)}
                                             onBlur={() => setField('fecha_ensayo', normalizeFlexibleDate(form.fecha_ensayo))}
+                                            onKeyDown={(e) => handleTableEnter(e, 'header', 0, 2)}
+                                            ref={(element) => {
+                                                tableFieldRefs.current[getTableFieldKey('header', 0, 2)] = element
+                                            }}
                                             autoComplete="off"
                                             data-lpignore="true"
                                             placeholder="DD/MM/AA"
@@ -492,6 +558,10 @@ export default function ModuloForm() {
                                             className={`${denseInputClass} text-center`}
                                             value={form.realizado_por}
                                             onChange={(e) => setField('realizado_por', e.target.value)}
+                                            onKeyDown={(e) => handleTableEnter(e, 'header', 0, 3)}
+                                            ref={(element) => {
+                                                tableFieldRefs.current[getTableFieldKey('header', 0, 3)] = element
+                                            }}
                                             autoComplete="off"
                                             data-lpignore="true"
                                         />
@@ -526,6 +596,10 @@ export default function ModuloForm() {
                                                 className={denseInputClass}
                                                 value={form.tara_numero}
                                                 onChange={(e) => setField('tara_numero', e.target.value)}
+                                                onKeyDown={(e) => handleTableEnter(e, 'contenido', 0, 0)}
+                                                ref={(element) => {
+                                                    tableFieldRefs.current[getTableFieldKey('contenido', 0, 0)] = element
+                                                }}
                                                 autoComplete="off"
                                                 data-lpignore="true"
                                             />
@@ -541,6 +615,10 @@ export default function ModuloForm() {
                                                 className={denseInputClass}
                                                 value={form.tara_suelo_humedo_g ?? ''}
                                                 onChange={(e) => setField('tara_suelo_humedo_g', parseNum(e.target.value))}
+                                                onKeyDown={(e) => handleTableEnter(e, 'contenido', 1, 0)}
+                                                ref={(element) => {
+                                                    tableFieldRefs.current[getTableFieldKey('contenido', 1, 0)] = element
+                                                }}
                                             />
                                         ),
                                     },
@@ -554,6 +632,10 @@ export default function ModuloForm() {
                                                 className={denseInputClass}
                                                 value={form.tara_suelo_seco_g ?? ''}
                                                 onChange={(e) => setField('tara_suelo_seco_g', parseNum(e.target.value))}
+                                                onKeyDown={(e) => handleTableEnter(e, 'contenido', 2, 0)}
+                                                ref={(element) => {
+                                                    tableFieldRefs.current[getTableFieldKey('contenido', 2, 0)] = element
+                                                }}
                                             />
                                         ),
                                     },
@@ -572,6 +654,10 @@ export default function ModuloForm() {
                                                 className={denseInputClass}
                                                 value={form.peso_tara_g ?? ''}
                                                 onChange={(e) => setField('peso_tara_g', parseNum(e.target.value))}
+                                                onKeyDown={(e) => handleTableEnter(e, 'contenido', 4, 0)}
+                                                ref={(element) => {
+                                                    tableFieldRefs.current[getTableFieldKey('contenido', 4, 0)] = element
+                                                }}
                                             />
                                         ),
                                     },
@@ -621,6 +707,10 @@ export default function ModuloForm() {
                                                                 const parsed = parseNum(e.target.value)
                                                                 setArrayField(fieldKey, specimenIdx, parsed)
                                                             }}
+                                                            onKeyDown={(e) => handleTableEnter(e, 'contenido', idx, specimenIdx + 1)}
+                                                            ref={(element) => {
+                                                                tableFieldRefs.current[getTableFieldKey('contenido', idx, specimenIdx + 1)] = element
+                                                            }}
                                                         />
                                                     </td>
                                                 )
@@ -657,6 +747,10 @@ export default function ModuloForm() {
                                                             onChange={(e) => {
                                                                 const parsed = parseNum(e.target.value)
                                                                 setArrayField(fieldKey, 0, parsed)
+                                                            }}
+                                                            onKeyDown={(e) => handleTableEnter(e, 'contenido', idx, 1)}
+                                                            ref={(element) => {
+                                                                tableFieldRefs.current[getTableFieldKey('contenido', idx, 1)] = element
                                                             }}
                                                         />
                                                     </td>
@@ -701,6 +795,10 @@ export default function ModuloForm() {
                                                     className={denseInputClass}
                                                     value={form.lectura_carga_kg[idx] ?? ''}
                                                     onChange={(e) => setArrayField('lectura_carga_kg', idx, parseNum(e.target.value))}
+                                                    onKeyDown={(e) => handleTableEnter(e, 'lectura', idx, 0)}
+                                                    ref={(element) => {
+                                                        tableFieldRefs.current[getTableFieldKey('lectura', idx, 0)] = element
+                                                    }}
                                                 />
                                             </td>
                                         </tr>
@@ -733,6 +831,10 @@ export default function ModuloForm() {
                                         className={denseInputClass}
                                         value={form.revisado_por}
                                         onChange={(e) => setField('revisado_por', e.target.value)}
+                                        onKeyDown={(e) => handleTableEnter(e, 'revisado', 0, 0)}
+                                        ref={(element) => {
+                                            tableFieldRefs.current[getTableFieldKey('revisado', 0, 0)] = element
+                                        }}
                                     >
                                         {REVISORES.map((opt) => (
                                             <option key={opt} value={opt}>
@@ -745,6 +847,10 @@ export default function ModuloForm() {
                                         value={form.revisado_fecha}
                                         onChange={(e) => setField('revisado_fecha', e.target.value)}
                                         onBlur={() => setField('revisado_fecha', normalizeFlexibleDate(form.revisado_fecha))}
+                                        onKeyDown={(e) => handleTableEnter(e, 'revisado', 1, 0)}
+                                        ref={(element) => {
+                                            tableFieldRefs.current[getTableFieldKey('revisado', 1, 0)] = element
+                                        }}
                                         autoComplete="off"
                                         data-lpignore="true"
                                         placeholder="DD/MM/AA"
@@ -758,6 +864,10 @@ export default function ModuloForm() {
                                         className={denseInputClass}
                                         value={form.aprobado_por}
                                         onChange={(e) => setField('aprobado_por', e.target.value)}
+                                        onKeyDown={(e) => handleTableEnter(e, 'aprobado', 0, 0)}
+                                        ref={(element) => {
+                                            tableFieldRefs.current[getTableFieldKey('aprobado', 0, 0)] = element
+                                        }}
                                     >
                                         {APROBADORES.map((opt) => (
                                             <option key={opt} value={opt}>
@@ -770,6 +880,10 @@ export default function ModuloForm() {
                                         value={form.aprobado_fecha}
                                         onChange={(e) => setField('aprobado_fecha', e.target.value)}
                                         onBlur={() => setField('aprobado_fecha', normalizeFlexibleDate(form.aprobado_fecha))}
+                                        onKeyDown={(e) => handleTableEnter(e, 'aprobado', 1, 0)}
+                                        ref={(element) => {
+                                            tableFieldRefs.current[getTableFieldKey('aprobado', 1, 0)] = element
+                                        }}
                                         autoComplete="off"
                                         data-lpignore="true"
                                         placeholder="DD/MM/AA"
